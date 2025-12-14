@@ -9,7 +9,7 @@
 - **Better AI prompts**: Improved prompts for more consistent JSON responses
 - **Fallback parsing**: Added `parseResumeBasic()` function for when AI is unavailable
 - **Contact info extraction**: Added basic email/phone extraction from resume text
-- **Model optimization**: Switched from gemini-1.5-pro to gemini-1.5-flash for faster processing
+- **Model optimization**: Switched from gemini-1.5-pro to gemini-2.5-flash for faster processing
 
 ### 2. Enhancement API Improvements (`app/api/resume/enhance/route.js`)
 - **Better rate limiting**: Increased from 2 to 5 requests per minute

@@ -78,6 +78,24 @@ body {
   .gradient-title {
     @apply gradient font-extrabold tracking-tighter text-transparent bg-clip-text pb-2 pr-2;
   }
+  
+  /* Theme-specific gradients */
+  .gradient-light {
+    @apply bg-gradient-to-b from-gray-600 via-gray-400 to-gray-800;
+  }
+  .gradient-dark {
+    @apply bg-gradient-to-b from-gray-200 via-gray-100 to-gray-400;
+  }
+  
+  /* Theme-aware gradient title */
+  .gradient-title-theme {
+    @apply font-extrabold tracking-tighter text-transparent bg-clip-text pb-2 pr-2;
+    @apply bg-gradient-to-b from-gray-600 via-gray-400 to-gray-800;
+  }
+  
+  .dark .gradient-title-theme {
+    @apply bg-gradient-to-b from-gray-200 via-gray-100 to-gray-400;
+  }
 }
 
 .hero-image-wrapper {
@@ -103,13 +121,14 @@ body {
   height: 100%;
   background: linear-gradient(
       to right,
-      rgba(255, 255, 255, 0.1) 1px,
+      hsl(var(--border)) 1px,
       transparent 1px
     ),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+    linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
   background-size: 50px 50px;
   pointer-events: none;
   z-index: -1;
+  opacity: 0.3;
 }
 
 .grid-background::before {
@@ -119,5 +138,14 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, transparent, rgba(0, 0, 0, 0.9));
+  background: radial-gradient(circle, transparent, hsl(var(--background)) 90%);
+}
+
+/* Theme-specific grid adjustments */
+.dark .grid-background {
+  opacity: 0.2;
+}
+
+.light .grid-background {
+  opacity: 0.4;
 }

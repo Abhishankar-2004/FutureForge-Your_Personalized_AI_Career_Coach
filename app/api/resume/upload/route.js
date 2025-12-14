@@ -194,7 +194,7 @@ export async function POST(req) {
 
     try {
       console.log("Sending prompt to AI model");
-      const result = await generateContentWithRetry(prompt, "gemini-1.5-flash");
+      const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
       const response = result.response;
       const responseText = response.text();
       
@@ -492,3 +492,7 @@ async function extractTextFromDoc(file) {
     throw new Error(`Failed to process Word document: ${error.message}`);
   }
 }
+
+
+
+

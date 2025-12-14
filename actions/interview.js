@@ -4,20 +4,10 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { generateContentWithRetry, handleGeminiError } from "@/lib/gemini-utils";
+import { getCurrentUser } from "@/lib/user-utils";
 
 export async function generateQuiz(jobDescription, questionTypes) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-    select: {
-      industry: true,
-      skills: true,
-    },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   const prompt = `
     You are an expert career coach and interview preparer.
@@ -46,34 +36,74 @@ export async function generateQuiz(jobDescription, questionTypes) {
 
     **IMPORTANT:** The "type" field must be exactly one of: "technical", "behavioral", or "situational". Do not use any other category names.
 
-    **Output Format:**
-    Return the response in this JSON format only, with no additional text or markdown.
-    The JSON object must be an object with a single key "questions" which is an array of question objects.
-    Ensure the JSON is perfectly formatted.
+    **CRITICAL OUTPUT REQUIREMENTS:**
+    1. Return ONLY valid JSON - no markdown, no code blocks, no explanatory text
+    2. Start your response with { and end with }
+    3. Do not include \`\`\`json or \`\`\` markers
+    4. The JSON must have exactly this structure:
 
     {
       "questions": [
         {
-          "question": "string",
-          "options": ["string", "string", "string", "string"],
-          "correctAnswer": "string",
-          "explanation": "string",
-          "type": "technical | behavioral | situational"
+          "question": "What is your question here?",
+          "options": ["Option A", "Option B", "Option C", "Option D"],
+          "correctAnswer": "Option A",
+          "explanation": "Why this is correct",
+          "type": "technical"
         }
       ]
     }
+    
+    Generate exactly 10 questions in this format.
   `;
 
   try {
-    const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
     const response = result.response;
     let text = response.text();
     
-    // Clean up the response text
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    console.log("=== RAW AI RESPONSE (first 500 chars) ===");
+    console.log(text.substring(0, 500));
+    console.log("=== END RAW RESPONSE ===");
+    
+    // Clean up the response text - handle multiple formats
+    text = text
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+    
+    // Find the JSON object in the response
+    const jsonStart = text.indexOf('{');
+    const jsonEnd = text.lastIndexOf('}');
+    
+    if (jsonStart === -1 || jsonEnd === -1 || jsonStart >= jsonEnd) {
+      console.error("❌ No valid JSON object found in response");
+      console.error("Response:", text);
+      throw new Error("AI response does not contain valid JSON");
+    }
+    
+    text = text.substring(jsonStart, jsonEnd + 1);
+    
+    console.log("=== CLEANED TEXT (first 500 chars) ===");
+    console.log(text.substring(0, 500));
+    console.log("=== END CLEANED TEXT ===");
     
     // Parse the JSON response
-    const quiz = JSON.parse(text);
+    let quiz;
+    try {
+      quiz = JSON.parse(text);
+      console.log("✅ JSON parsed successfully!");
+      console.log("Number of questions:", quiz.questions?.length);
+    } catch (parseError) {
+      console.error("❌ JSON PARSE ERROR:", parseError.message);
+      console.error("=== FULL TEXT THAT FAILED ===");
+      console.error(text);
+      console.error("=== END FAILED TEXT ===");
+      console.error("Text length:", text.length);
+      console.error("First char:", text.charAt(0));
+      console.error("Last char:", text.charAt(text.length - 1));
+      throw new Error("Failed to parse AI response as JSON. The AI may have returned invalid format.");
+    }
     
     // Validate the response structure
     if (!quiz.questions || !Array.isArray(quiz.questions) || quiz.questions.length === 0) {
@@ -138,23 +168,23 @@ export async function generateQuiz(jobDescription, questionTypes) {
     return validatedQuestions;
   } catch (error) {
     console.error("Error generating quiz:", error.message);
-    if (error instanceof SyntaxError) {
-      throw new Error("Failed to parse quiz questions from the AI. The format was invalid. Please try again.");
+    console.error("Full error:", error);
+    
+    if (error instanceof SyntaxError || error.message.includes("parse")) {
+      throw new Error("The AI returned an invalid format. This might be due to:\n1. API rate limits\n2. Complex job description\n3. Temporary AI service issue\n\nPlease try again with a simpler job description or wait a moment.");
     }
+    
+    if (error.message.includes("Invalid or empty quiz format")) {
+      throw new Error("The AI didn't generate any questions. Please try again with a more detailed job description.");
+    }
+    
     // Re-throw the original error or a more specific one
-    throw new Error(error.message || "An unexpected error occurred while generating the quiz.");
+    throw new Error(error.message || "An unexpected error occurred while generating the quiz. Please try again.");
   }
 }
 
 export async function saveQuizResult(questions, answers, score, questionTypes) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   const questionResults = questions.map((q, index) => ({
     question: q.question,
@@ -189,7 +219,7 @@ export async function saveQuizResult(questions, answers, score, questionTypes) {
     `;
 
     try {
-      const tipResult = await generateContentWithRetry(improvementPrompt, "gemini-1.5-pro");
+      const tipResult = await generateContentWithRetry(improvementPrompt, "gemini-2.5-flash");
 
       improvementTip = tipResult.response.text().trim();
     } catch (error) {
@@ -217,14 +247,7 @@ export async function saveQuizResult(questions, answers, score, questionTypes) {
 }
 
 export async function getAssessments() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   try {
     const assessments = await db.assessment.findMany({
@@ -244,14 +267,7 @@ export async function getAssessments() {
 }
 
 export async function createMockInterview(formData) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   const { jobDescription, jobTitle, companyName, questionCount, questionTypes } =
     formData;
@@ -294,7 +310,7 @@ export async function createMockInterview(formData) {
   `;
 
   try {
-    const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const generated = JSON.parse(text);
@@ -343,14 +359,7 @@ export async function createMockInterview(formData) {
 }
 
 export async function getMockInterviews() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   return await db.mockInterview.findMany({
     where: { userId: user.id },
@@ -359,14 +368,7 @@ export async function getMockInterviews() {
 }
 
 export async function getMockInterviewById(interviewId) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   const interview = await db.mockInterview.findUnique({
     where: {
@@ -429,7 +431,7 @@ export async function submitAnswerAndGetFeedback({ interviewId, questionIndex, a
   };
 
   try {
-    const result = await generateContentWithRetry(feedbackPrompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(feedbackPrompt, "gemini-2.5-flash");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     feedback = JSON.parse(text);
@@ -482,7 +484,7 @@ export async function completeMockInterview(interviewId) {
 
   let overallFeedback = "Could not generate overall feedback at this time.";
   try {
-    const result = await generateContentWithRetry(feedbackPrompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(feedbackPrompt, "gemini-2.5-flash");
     overallFeedback = result.response.text().trim();
   } catch (error) {
     console.error("Error generating overall feedback:", error);
@@ -524,7 +526,7 @@ export async function getImprovedAnswerSuggestion({ interviewId, questionIndex }
   `;
 
   try {
-    const result = await generateContentWithRetry(improvementPrompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(improvementPrompt, "gemini-2.5-flash");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     return JSON.parse(text);
@@ -534,3 +536,13 @@ export async function getImprovedAnswerSuggestion({ interviewId, questionIndex }
     throw new Error(errorInfo.message);
   }
 }
+
+
+
+
+
+
+
+
+
+

@@ -55,7 +55,7 @@ export async function POST(req) {
     `;
 
     try {
-      const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+      const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
       const response = result.response;
       const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       
@@ -101,3 +101,7 @@ export async function POST(req) {
     return NextResponse.json({ error: errorInfo.message }, { status: errorInfo.status });
   }
 }
+
+
+
+

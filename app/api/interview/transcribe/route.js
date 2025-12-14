@@ -24,7 +24,7 @@ export async function POST(request) {
     const base64Audio = buffer.toString('base64');
 
     // Use Gemini for audio transcription
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     
     const result = await model.generateContent([
       {
@@ -54,3 +54,7 @@ export async function POST(request) {
     );
   }
 }
+
+
+
+

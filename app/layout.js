@@ -1,10 +1,9 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import HeaderClient from "@/components/header-client";
 import { ThemeProvider } from "@/components/theme-provider";
-import { dark } from "@clerk/themes";
+import { ClerkThemeProvider } from "@/components/clerk-theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,35 +14,32 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-      }}
-    >
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <link rel="icon" href="/logo.png" sizes="any" />
-        </head>
-        <body className={`${inter.className}`}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/logo.png" sizes="any" />
+      </head>
+      <body className={`${inter.className}`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem={true}
+          storageKey="sensai-theme"
+          themes={["light", "dark", "system"]}
+        >
+          <ClerkThemeProvider>
             <HeaderClient />
             <main className="min-h-screen">{children}</main>
             <Toaster richColors />
 
             <footer className="bg-muted/50 py-12">
-              <div className="container mx-auto px-4 text-center text-gray-200">
-                <p>Sensai - The AI Career Coach</p>
+              <div className="container mx-auto px-4 text-center text-muted-foreground">
+                <p>FutureForge</p>
                 <p className="mt-2">Made with 💗 by Abhi_S</p>
               </div>
             </footer>
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          </ClerkThemeProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

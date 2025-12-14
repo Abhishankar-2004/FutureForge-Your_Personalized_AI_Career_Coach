@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
+import { ThemeToggleSimple } from "./theme-toggle";
 
 export default function HeaderClient() {
   const [mounted, setMounted] = useState(false);
@@ -64,6 +65,8 @@ export default function HeaderClient() {
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-2 md:space-x-4">
+          {/* Theme Toggle */}
+          <ThemeToggleSimple />
           <SignedIn>
             <Link href="/dashboard">
               <Button
@@ -107,6 +110,12 @@ export default function HeaderClient() {
                   <Link href="/interview" className="flex items-center gap-2">
                     <GraduationCap className="h-4 w-4" />
                     Interview Prep
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/theme-demo" className="flex items-center gap-2">
+                    <StarsIcon className="h-4 w-4" />
+                    Theme Demo
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>

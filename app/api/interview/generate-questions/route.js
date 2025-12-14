@@ -17,7 +17,7 @@ export async function POST(req) {
       Job Description:
       ${jobDescription}
     `;
-    const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
     const response = result.response;
     const responseText = response.text();
     const jsonMatch = responseText.match(/\[.*\]/s);
@@ -31,3 +31,8 @@ export async function POST(req) {
     return new NextResponse(errorInfo.message, { status: errorInfo.status });
   }
 }
+
+
+
+
+

@@ -4,27 +4,14 @@ import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { generateContentWithRetry, handleGeminiError } from "@/lib/gemini-utils";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/lib/user-utils";
 
 export async function saveResume(content) {
   console.log("saveResume action called with content length:", content?.length || 0);
   
-  const { userId } = await auth();
+  const { userId, user } = await getCurrentUser();
   console.log("User ID from auth:", userId);
-  
-  if (!userId) {
-    console.error("No user ID found - user not authenticated");
-    throw new Error("Unauthorized");
-  }
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-  
   console.log("User found:", user ? "Yes" : "No");
-  if (!user) {
-    console.error("User not found in database for clerkUserId:", userId);
-    throw new Error("User not found");
-  }
 
   try {
     console.log("Starting ATS analysis for user industry:", user.industry);
@@ -118,14 +105,7 @@ async function analyzeResume(content, industry) {
 }
 
 export async function getResume() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   return await db.resume.findUnique({
     where: {
@@ -135,24 +115,22 @@ export async function getResume() {
 }
 
 export async function improveWithAI({ current, type }) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
+  const { user } = await getCurrentUser();
+  
+  // Get the user with industry insights
+  const userWithInsights = await db.user.findUnique({
+    where: { id: user.id },
     include: {
       industryInsight: true,
     },
   });
 
-  if (!user) throw new Error("User not found");
-
   // Get industry-specific keywords and requirements
-  const industryKeywords = user.industryInsight?.keywords || [];
-  const industryRequirements = user.industryInsight?.requirements || [];
+  const industryKeywords = userWithInsights.industryInsight?.keywords || [];
+  const industryRequirements = userWithInsights.industryInsight?.requirements || [];
 
   const prompt = `
-    As an expert resume writer specializing in ${user.industry}, improve the following ${type} description.
+    As an expert resume writer specializing in ${userWithInsights.industry}, improve the following ${type} description.
     Current content: "${current}"
 
     Industry-specific keywords to include: ${industryKeywords.join(", ")}
@@ -196,20 +174,18 @@ export async function improveWithAI({ current, type }) {
 }
 
 export async function generateResumeTemplate(template) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
+  const { user } = await getCurrentUser();
+  
+  // Get the user with industry insights
+  const userWithInsights = await db.user.findUnique({
+    where: { id: user.id },
     include: {
       industryInsight: true,
     },
   });
 
-  if (!user) throw new Error("User not found");
-
   const prompt = `
-    Generate a professional resume template for a ${user.industry} professional with the following style: ${template}
+    Generate a professional resume template for a ${userWithInsights.industry} professional with the following style: ${template}
     
     Include sections for:
     1. Contact Information
@@ -235,14 +211,7 @@ export async function generateResumeTemplate(template) {
 }
 
 export async function deleteResume() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
+  const { user } = await getCurrentUser();
 
   try {
     await db.resume.delete({
