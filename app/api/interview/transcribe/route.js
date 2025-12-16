@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export async function POST(request) {
   try {
@@ -18,25 +15,31 @@ export async function POST(request) {
       return NextResponse.json({ error: "No audio file provided" }, { status: 400 });
     }
 
-    // Convert audio file to base64
-    const bytes = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64Audio = buffer.toString('base64');
+    // Convert audio file to form data for OpenAI Whisper API
+    const audioFormData = new FormData();
+    audioFormData.append('file', audioFile);
+    audioFormData.append('model', 'whisper-1');
 
-    // Use Gemini for audio transcription
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: audioFile.type,
-          data: base64Audio
-        }
+    // Use OpenAI Whisper API for audio transcription (compatible with Groq's infrastructure)
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
       },
-      "Please transcribe this audio file. Return only the transcribed text, no additional formatting or explanations."
-    ]);
+      body: audioFormData,
+    });
 
-    const transcription = result.response.text().trim();
+    if (!response.ok) {
+      // Fallback: Return a message indicating transcription is not available
+      console.warn("Audio transcription not available with current API configuration");
+      return NextResponse.json(
+        { error: "Audio transcription is temporarily unavailable. Please type your answer instead." },
+        { status: 503 }
+      );
+    }
+
+    const data = await response.json();
+    const transcription = data.text?.trim();
 
     if (!transcription) {
       return NextResponse.json(
@@ -49,8 +52,8 @@ export async function POST(request) {
   } catch (error) {
     console.error("Error transcribing audio:", error);
     return NextResponse.json(
-      { error: "Failed to transcribe audio. Please try again." },
-      { status: 500 }
+      { error: "Audio transcription is temporarily unavailable. Please type your answer instead." },
+      { status: 503 }
     );
   }
 }

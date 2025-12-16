@@ -83,7 +83,7 @@ Return only the improved skills text without any additional formatting or explan
 
     try {
       // Generate content with retry logic
-      const result = await generateContentWithRetry(prompt);
+      const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
       const response = await result.response;
       const improvedContent = response.text();
 

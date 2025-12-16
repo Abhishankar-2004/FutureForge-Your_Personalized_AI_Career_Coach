@@ -1,11 +1,8 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateContentWithRetry, handleGeminiError } from "@/lib/gemini-utils";
 import { getCurrentUser } from "@/lib/user-utils";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export const generateAIInsights = async (industry) => {
   try {
@@ -29,7 +26,7 @@ export const generateAIInsights = async (industry) => {
             Include at least 3 skills and trends.
           `;
 
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text();
     const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();

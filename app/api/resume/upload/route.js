@@ -194,7 +194,7 @@ export async function POST(req) {
 
     try {
       console.log("Sending prompt to AI model");
-      const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
+      const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
       const response = result.response;
       const responseText = response.text();
       

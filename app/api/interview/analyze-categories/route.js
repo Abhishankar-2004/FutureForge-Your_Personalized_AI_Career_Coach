@@ -55,7 +55,7 @@ export async function POST(req) {
     `;
 
     try {
-      const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
+      const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
       const response = result.response;
       const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       

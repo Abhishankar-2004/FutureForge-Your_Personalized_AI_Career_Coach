@@ -1,11 +1,8 @@
 "use server";
 
 import { db } from "@/lib/prisma";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateContentWithRetry, handleGeminiError } from "@/lib/gemini-utils";
 import { getCurrentUser } from "@/lib/user-utils";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 export async function generateCoverLetter(data) {
   const { user } = await getCurrentUser();
@@ -37,7 +34,7 @@ export async function generateCoverLetter(data) {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const content = result.response.text().trim();
 
     const coverLetter = await db.coverLetter.create({

@@ -58,7 +58,7 @@ export async function generateQuiz(jobDescription, questionTypes) {
   `;
 
   try {
-    const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     let text = response.text();
     
@@ -219,7 +219,7 @@ export async function saveQuizResult(questions, answers, score, questionTypes) {
     `;
 
     try {
-      const tipResult = await generateContentWithRetry(improvementPrompt, "gemini-2.5-flash");
+      const tipResult = await generateContentWithRetry(improvementPrompt, "llama-3.3-70b-versatile");
 
       improvementTip = tipResult.response.text().trim();
     } catch (error) {
@@ -310,7 +310,7 @@ export async function createMockInterview(formData) {
   `;
 
   try {
-    const result = await generateContentWithRetry(prompt, "gemini-2.5-flash");
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const generated = JSON.parse(text);
@@ -431,7 +431,7 @@ export async function submitAnswerAndGetFeedback({ interviewId, questionIndex, a
   };
 
   try {
-    const result = await generateContentWithRetry(feedbackPrompt, "gemini-2.5-flash");
+    const result = await generateContentWithRetry(feedbackPrompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     feedback = JSON.parse(text);
@@ -484,7 +484,7 @@ export async function completeMockInterview(interviewId) {
 
   let overallFeedback = "Could not generate overall feedback at this time.";
   try {
-    const result = await generateContentWithRetry(feedbackPrompt, "gemini-2.5-flash");
+    const result = await generateContentWithRetry(feedbackPrompt, "llama-3.3-70b-versatile");
     overallFeedback = result.response.text().trim();
   } catch (error) {
     console.error("Error generating overall feedback:", error);
@@ -526,7 +526,7 @@ export async function getImprovedAnswerSuggestion({ interviewId, questionIndex }
   `;
 
   try {
-    const result = await generateContentWithRetry(improvementPrompt, "gemini-2.5-flash");
+    const result = await generateContentWithRetry(improvementPrompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     return JSON.parse(text);

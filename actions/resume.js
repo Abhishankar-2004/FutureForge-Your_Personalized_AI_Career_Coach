@@ -83,7 +83,7 @@ async function analyzeResume(content, industry) {
   `;
 
   try {
-    const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const analysis = JSON.parse(response.text().trim());
     return {
@@ -154,7 +154,7 @@ export async function improveWithAI({ current, type }) {
 
   try {
     console.log("Sending prompt to Gemini:", prompt);
-    const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const improvedContent = response.text().trim();
     
@@ -200,7 +200,7 @@ export async function generateResumeTemplate(template) {
   `;
 
   try {
-    const result = await generateContentWithRetry(prompt, "gemini-1.5-pro");
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     return response.text().trim();
   } catch (error) {

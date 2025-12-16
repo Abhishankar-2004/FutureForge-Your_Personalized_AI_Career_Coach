@@ -3,10 +3,7 @@
 import { db } from "@/lib/prisma";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+import { generateContentWithRetry, handleGeminiError } from "@/lib/gemini-utils";
 
 export async function generateQuiz() {
   const { userId } = await auth();
@@ -45,7 +42,7 @@ export async function generateQuiz() {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text();
     
@@ -130,7 +127,7 @@ export async function saveQuizResult(questions, answers, score) {
     `;
 
     try {
-      const tipResult = await model.generateContent(improvementPrompt);
+      const tipResult = await generateContentWithRetry(improvementPrompt, "llama-3.3-70b-versatile");
 
       improvementTip = tipResult.response.text().trim();
       console.log(improvementTip);
@@ -223,7 +220,7 @@ export async function createMockInterview(formData) {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await generateContentWithRetry(prompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const generated = JSON.parse(text);
@@ -327,7 +324,7 @@ export async function submitAnswerAndGetFeedback({ interviewId, questionIndex, a
 
   let feedback = {};
   try {
-    const result = await model.generateContent(feedbackPrompt);
+    const result = await generateContentWithRetry(feedbackPrompt, "llama-3.3-70b-versatile");
     const response = result.response;
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     feedback = JSON.parse(text);
